@@ -4,6 +4,11 @@ import java.util.Optional;
 
 public class Main {
 
+    /**
+     * Simple domain object used in the example parser.  It mirrors the fields in
+     * the JSON input and provides a {@link #toString()} implementation so tests
+     * can easily verify parsing behaviour.
+     */
     public static class Student{
         private String name;
         private int id;
@@ -30,6 +35,11 @@ public class Main {
         }
     }
 
+    /**
+     * Parser for the field "name" in the JSON input.  It ensures that the
+     * current token is the string "name" followed by a colon and then consumes a
+     * sequence of letters representing the student's actual name.
+     */
     public static Parsec<String> parseStudentName(){
         return ParsecUtils.quotedString().bind(name -> {
             if (!name.equals("name")){
@@ -47,6 +57,10 @@ public class Main {
         });
     }
 
+    /**
+     * Parser for the field "id" which reads a quoted key, a colon and a number
+     * representing the student's identifier.
+     */
     public static Parsec<Integer> parseStudentId(){
         return ParsecUtils.quotedString().bind(id -> {
             if (!id.equals("id")){
@@ -64,11 +78,19 @@ public class Main {
         });
     }
 
+    /**
+     * Generic parser for a comma separated list of numbers enclosed by a
+     * terminating character.  The parser supplied by {@code num} parses each
+     * individual number while {@code del} consumes the delimiter between
+     * numbers and {@code done} marks the end of the list.  This parser is used
+     * by {@link #parseStudentGrades()} but can be reused for other lists.
+     */
     public static Parsec<List<Integer> > gradeParser(Parsec<Integer> num, Parsec<Character> del, Parsec<Character> done){
         return new Parsec<>(s -> {
             List<Integer> res = new ArrayList<>();
             String rest = s;
 
+            // parse the first number outside the loop so we can require at least one value
             var firstNum = num.runParser(rest);
             if(firstNum.getResult().isEmpty()){
                 return new Parsec.ParserResult<>(Optional.empty(), s);
@@ -76,6 +98,7 @@ public class Main {
             res.add(firstNum.getResult().get());
             rest = firstNum.getParseNext();
 
+            // continue reading numbers until the terminating token is reached
             while(true){
                 var sep = ParsecUtils.option(del, done).runParser(rest);
                 if(sep.getResult().isEmpty()){
@@ -100,6 +123,10 @@ public class Main {
     }
 
 
+    /**
+     * Parser for the "grades" field which leverages {@link #gradeParser} to
+     * read a list of integers enclosed in square brackets.
+     */
     public static Parsec<List<Integer>> parseStudentGrades() {
         return ParsecUtils.quotedString().bind(grades -> {
             if (!grades.equals("grades")) {
@@ -119,6 +146,12 @@ public class Main {
         });
     }
 
+    /**
+     * High level parser for a {@link Student} instance.  It recognises a small
+     * subset of JSON containing the keys {@code name}, {@code id} and
+     * {@code grades}.  Whitespace is skipped and each field parser is chained
+     * together using {@code bind} to enforce ordering.
+     */
     public static Parsec<Student> studentFromJson(){
         return ParsecUtils.space().bind( v1 ->
         ParsecUtils.charParser('{').bind(c->
@@ -131,6 +164,11 @@ public class Main {
                         }))))))));
     }
 
+    /**
+     * Entry point used for manual experimentation.  Running the program will
+     * attempt to parse a fixed JSON string and print either the resulting
+     * {@link Student} or a failure message.
+     */
     public static void main(String[] args) {
        var result = studentFromJson().runParser("{\"name\":guy,\"id\":12345,\"grades\":[100,90,80,100,96,10]}");
        if(result.getResult().isPresent()){

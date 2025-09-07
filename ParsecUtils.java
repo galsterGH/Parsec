@@ -4,7 +4,10 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * @apiNote Utility functions for creating Parser combinators
+ * Collection of helper combinators for building {@link Parsec} instances.  The
+ * functions provided here mirror those found in functional programming parser
+ * libraries and can be composed to describe complex grammars in a declarative
+ * style.
  */
 public class ParsecUtils {
 
@@ -122,6 +125,8 @@ public class ParsecUtils {
      * @return a Parser that can match a quoted string
      */
     static Parsec<String> quotedString(){
+        // first read an opening quote, then a sequence of alphanumeric
+        // characters, finally a closing quote and return the gathered string
         return charParser('"').bind(c -> some(alphaNum()).bind(lchar -> charParser('"').bind(c2->
                 new Parsec<>(s -> {
                     StringBuilder builder = new StringBuilder();
@@ -146,6 +151,8 @@ public class ParsecUtils {
      * @return A list of T - the result of applying p successfully at least one time
      */
     static <T> Parsec<List<T>> some(Parsec<T> p){
+        // parse the first occurrence then parse zero or more additional
+        // occurrences and prepend the first result
         return p.bind(t -> many(p).bind(trs-> {
             List<T> fres = new ArrayList<>();
             fres.add(t);
@@ -162,6 +169,11 @@ public class ParsecUtils {
                 unit(Optional.empty()));
     }
 
+    /**
+     * Consumes leading and trailing whitespace around the given parser.  This is
+     * useful for token based grammars where insignificant spaces should be
+     * ignored.
+     */
     static <T> Parsec<T> token(Parsec<T> p){
         return space().bind(v-> p.bind(
                                 t -> space().bind(v2 ->

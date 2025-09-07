@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class Main {
 
@@ -14,6 +15,7 @@ public class Main {
             this.grades = grades;
         }
 
+        @Override
         public String toString(){
             StringBuilder temp = new StringBuilder();
             temp.append("name: " + name + " id: " + Integer.toString(id)+ " grades: [");
@@ -36,9 +38,11 @@ public class Main {
 
             return ParsecUtils.charParser(':').bind(c1 ->
                     ParsecUtils.some(ParsecUtils.letter()).bind(actualName -> {
-                        StringBuilder nameBuilder = new StringBuilder();
-                        actualName.stream().forEach(nameBuilder::append);
-                        return (Parsec<String>)(ParsecUtils.unit(nameBuilder.toString()));
+                        StringBuilder nameBuilder = new StringBuilder(actualName.size());
+                        for(char ch : actualName){
+                            nameBuilder.append(ch);
+                        }
+                        return ParsecUtils.unit(nameBuilder.toString());
                     }));
         });
     }
@@ -55,26 +59,44 @@ public class Main {
                         for(char i : actualIdLst){
                             actualId = actualId*10 + (i - '0');
                         }
-                        return (Parsec<Integer>)(ParsecUtils.unit(actualId));
+                        return ParsecUtils.unit(actualId);
                     }));
         });
     }
 
     public static Parsec<List<Integer> > gradeParser(Parsec<Integer> num, Parsec<Character> del, Parsec<Character> done){
-        return num.bind(n1 -> ParsecUtils.option(del,done).bind(c -> {
-                if(c.equals(']')) {
-                    List<Integer> res = new ArrayList<>();
-                    res.add(n1);
-                    return ParsecUtils.unit(res);
+        return new Parsec<>(s -> {
+            List<Integer> res = new ArrayList<>();
+            String rest = s;
+
+            var firstNum = num.runParser(rest);
+            if(firstNum.getResult().isEmpty()){
+                return new Parsec.ParserResult<>(Optional.empty(), s);
+            }
+            res.add(firstNum.getResult().get());
+            rest = firstNum.getParseNext();
+
+            while(true){
+                var sep = ParsecUtils.option(del, done).runParser(rest);
+                if(sep.getResult().isEmpty()){
+                    return new Parsec.ParserResult<>(Optional.empty(), rest);
+                }
+                char c = sep.getResult().get();
+                rest = sep.getParseNext();
+                if(c == ']'){
+                    break;
                 }
 
-                return gradeParser(num,del,done).bind(rest -> {
-                   List<Integer> res = new ArrayList<>();
-                   res.add(n1);
-                   res.addAll(rest);
-                   return ParsecUtils.unit(res);
-                });
-        }));
+                var nextNum = num.runParser(rest);
+                if(nextNum.getResult().isEmpty()){
+                    return new Parsec.ParserResult<>(Optional.empty(), rest);
+                }
+                res.add(nextNum.getResult().get());
+                rest = nextNum.getParseNext();
+            }
+
+            return new Parsec.ParserResult<>(Optional.of(res), rest);
+        });
     }
 
 
@@ -111,8 +133,8 @@ public class Main {
 
     public static void main(String[] args) {
        var result = studentFromJson().runParser("{\"name\":guy,\"id\":12345,\"grades\":[100,90,80,100,96,10]}");
-       if(result.result.isPresent()){
-           System.out.println(result.result.get());
+       if(result.getResult().isPresent()){
+           System.out.println(result.getResult().get());
            return;
        }
 

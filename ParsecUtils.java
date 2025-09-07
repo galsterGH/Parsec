@@ -35,10 +35,10 @@ public class ParsecUtils {
      * @param <T>
      * @return A parser which encapsulates the logic of tyring the first and defaulting to the second
      */
-    static <T> Parsec<T> option(Parsec p1, Parsec p2){
-        return new Parsec<>((Function<String, Parsec.ParserResult<T>>) s -> {
+    static <T> Parsec<T> option(Parsec<T> p1, Parsec<T> p2){
+        return new Parsec<>(s -> {
             var result = p1.runParser(s);
-            if(result.result.isEmpty()){
+            if(result.getResult().isEmpty()){
                 return p2.runParser(s);
             }
 

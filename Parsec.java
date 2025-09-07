@@ -7,11 +7,20 @@ class Parsec<T> {
      * @param <T> the underlying type of the result
      */
     static class ParserResult<T>{
-        Optional<T> result;
-        String parseNext;
+        private final Optional<T> result;
+        private final String parseNext;
+
         ParserResult(Optional<T> res, String next){
             result = res;
             parseNext=  next;
+        }
+
+        Optional<T> getResult() {
+            return result;
+        }
+
+        String getParseNext() {
+            return parseNext;
         }
     }
 
@@ -48,11 +57,11 @@ class Parsec<T> {
     <U> Parsec<U> bind(Function<T, Parsec<U>> binder) {
         return new Parsec<U>(s -> {
             ParserResult<T> res = runParser(s);
-            if (res.result.isEmpty()) {
-                return new ParserResult(Optional.empty(), res.parseNext);
+            if (res.getResult().isEmpty()) {
+                return new ParserResult<>(Optional.empty(), res.getParseNext());
             }
 
-            return binder.apply((res.result.get())).runParser(res.parseNext);
+            return binder.apply(res.getResult().get()).runParser(res.getParseNext());
         });
     }
 }

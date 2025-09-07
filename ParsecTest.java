@@ -1,5 +1,10 @@
 import java.util.List;
 
+/**
+ * Minimal test suite exercising the parsing combinators.  The tests are written
+ * using plain {@code assert} statements so they can be run with the standard
+ * {@code java} command.
+ */
 public class ParsecTest {
     public static void main(String[] args) {
         testStudentFromJson();
@@ -7,6 +12,10 @@ public class ParsecTest {
         System.out.println("All tests passed");
     }
 
+    /**
+     * Verifies that a small JSON object is correctly parsed into a
+     * {@link Main.Student} instance.
+     */
     static void testStudentFromJson() {
         String json = "{\"name\":guy,\"id\":12345,\"grades\":[100,90,80]}";
         var res = Main.studentFromJson().runParser(json);
@@ -15,6 +24,11 @@ public class ParsecTest {
         assert s.toString().equals("name: guy id: 12345 grades: [100,90,80]");
     }
 
+    /**
+     * Stress test for {@link Main#gradeParser(Parsec, Parsec, Parsec)} ensuring
+     * that it can handle a long list without stack overflows or performance
+     * issues.
+     */
     static void testGradeParserLongList() {
         StringBuilder gradesBuilder = new StringBuilder();
         for (int i = 0; i < 1000; i++) {
